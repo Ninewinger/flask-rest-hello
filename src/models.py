@@ -2,6 +2,7 @@ from flask_sqlalchemy import SQLAlchemy
 
 db = SQLAlchemy()
 
+
 class User(db.Model):
     __tablename__ = 'User'
     id = db.Column(db.Integer, primary_key=True)
@@ -10,7 +11,8 @@ class User(db.Model):
     name = db.Column(db.String(250), nullable=False)
     lastname = db.Column(db.String(250), nullable=False)
     email = db.Column(db.String(250), nullable=False, unique= True)
-    favorite = db.relationship('Favorite', backref='User', uselist=False)
+    characters_fav = db.relationship('Characters', secondary=favorite_char, lazy='subquery')
+    planet_fav = db.relationship('Planets', secondary=favorite_plan, lazy='subquery')
 
     def __repr__(self):
         return '<User %r>' % self.username
@@ -46,13 +48,13 @@ class User(db.Model):
         db.session.delete(self)
         db.session.commit()
 
-
+"""
 class Favorite(db.Model):
     __tablename__ = 'Favorite'
     id = db.Column(db.Integer, primary_key=True)
-    character_id = db.Column(db.Integer, db.ForeignKey('Characters.id'), nullable=False)
-    planet_id = db.Column(db.Integer, db.ForeignKey('Planets.id'))
     user_id = db.Column(db.Integer, db.ForeignKey('User.id'), nullable=False)
+    characters_fav = db.relationship('Characters', secondary=favorite_char, lazy='subquery', backref=db.backref('favorite', lazy=True))
+    planet_fav = db.relationship('Planets', secondary=favorite_char, lazy='subquery', backref=db.backref('user', lazy=True))
 
     def __repr__(self):
         return '<Favorite %r>' % self.user_id
@@ -65,6 +67,12 @@ class Favorite(db.Model):
             # do not serialize the password, its a security breach
         }
 
+    def get_character(self):
+        return list(map(lambda role: Characters.serialize(), self.roles))
+
+    def get_planet(self):
+        return list(map(lambda role: Planets.serialize(), self.roles))
+
     def save(self):
         db.session.add(self)
         db.session.commit()
@@ -75,7 +83,7 @@ class Favorite(db.Model):
     def delete(self):
         db.session.delete(self)
         db.session.commit()
-
+"""
 
 class Planets(db.Model):
     __tablename__= "Planets"
@@ -144,3 +152,13 @@ class Characters(db.Model):
     def delete(self):
         db.session.delete(self)
         db.session.commit()
+
+favorite_char = db.Table('favorite_char',
+    db.Column('user_id', db.Integer, db.ForeignKey('User.id'), primary_key=True),
+    db.Column('character_id', db.Integer, db.ForeignKey('Character.id'), primary_key=True)
+)
+
+favorite_plan = db.Table('favorite_plan',
+    db.Column('favorite_id', db.Integer, db.ForeignKey('User.id'), primary_key=True),
+    db.Column('planet_id', db.Integer, db.ForeignKey('Planet.id'), primary_key=True)
+)
